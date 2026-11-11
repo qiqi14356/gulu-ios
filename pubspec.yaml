@@ -1,0 +1,20 @@
+name: gulu
+description: 咕噜咕噜 iOS 客户端重建工程（Flutter / iOS）
+publish_to: "none"
+version: 2.2.5+225
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+# 只保留真正被 import 的依赖。
+# 少一个插件 = pod install 少一堆原生库 = macOS runner 上少一个失败点。
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^5.7.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,28 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/ephemeral/
+ios/Runner.xcworkspace/xcuserdata/
+ios/Runner.xcodeproj/xcuserdata/
+*.ipa
+*.dSYM.zip
+
+# 系统
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+
+# 生成物（ios/ 由 gen_ios_container.sh 现场生成，不入库）
+# 如果你想连 ios/ 一起提交，删掉下面这行
+ios/

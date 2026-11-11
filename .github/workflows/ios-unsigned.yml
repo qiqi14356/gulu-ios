@@ -1,0 +1,95 @@
+name: build-ios-unsigned
+
+# 在 GitHub 免费的 macOS runner 上编译出未签名 .ipa。
+# 下载后用 Sideloadly / AltStore / TrollStore 重签安装。
+#
+# 触发方式：
+#   - 手动：Actions → build-ios-unsigned → Run workflow
+#   - 推送到 main：自动跑
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "业务 API 根地址（探测用，可留空）"
+        required: false
+        default: "https://glgl.tv"
+      flutter_version:
+        description: "Flutter 版本"
+        required: false
+        default: "3.24.5"
+  push:
+    branches: [main]
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show runner toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          pod --version || true
+          python3 --version
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ github.event.inputs.flutter_version || '3.24.5' }}
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Precache iOS artifacts
+        run: flutter precache --ios
+
+      - name: Resolve Dart dependencies
+        run: flutter pub get
+
+      - name: Generate ios/ container
+        run: |
+          chmod +x scripts/*.sh
+          ORG=com.gulugulu NAME=gulu ./scripts/gen_ios_container.sh
+
+      - name: Patch Info.plist
+        run: python3 scripts/patch_info_plist.py ios/Runner/Info.plist
+
+      - name: Dump resolved plist keys
+        run: |
+          plutil -p ios/Runner/Info.plist | grep -E "CFBundleDisplayName|UIBackgroundModes|ITSAppUsesNonExemptEncryption" || true
+
+      # flutter build 会自己跑 pod install，不要提前手动执行
+      - name: Build (release, no codesign)
+        env:
+          API_BASE: ${{ github.event.inputs.api_base }}
+        run: |
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --dart-define=API_BASE="${API_BASE:-https://glgl.tv}"
+
+      - name: Package unsigned ipa
+        run: |
+          ./scripts/package_ipa.sh \
+            build/ios/iphoneos/Runner.app \
+            build/ios/ipa/gulu-unsigned.ipa
+
+      - name: Report artifact size
+        run: ls -lh build/ios/ipa/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gulu-unsigned-ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 14
+          if-no-files-found: error
