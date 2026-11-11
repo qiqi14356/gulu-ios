@@ -17,9 +17,9 @@ on:
         required: false
         default: "3.24.5"
       xcode_version:
-        description: "Xcode 版本（选 runner 上存在的，如 15.4 / 16.2 / latest-stable）"
+        description: "Xcode 版本（macos-15 上是 16.x；用 latest-stable 自动挑）"
         required: false
-        default: "15.4"
+        default: "latest-stable"
   push:
     branches: [main]
     paths:
@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 45
 
     steps:
@@ -45,7 +45,7 @@ jobs:
       - name: Select Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: ${{ github.event.inputs.xcode_version || '15.4' }}
+          xcode-version: ${{ github.event.inputs.xcode_version || 'latest-stable' }}
 
       - name: Show runner toolchain
         run: |
