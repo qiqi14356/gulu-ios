@@ -109,7 +109,7 @@ jobs:
           APP=build/ios/iphoneos/Runner.app
           test -d "$APP" || { echo "没有产出 $APP"; exit 1; }
           test -f "$APP/Runner" || { echo "缺可执行文件 Runner"; exit 1; }
-          test -f "$APP/App.framework/App" || { echo "缺 App.framework/App（Dart AOT 产物）"; exit 1; }
+          test -f "$APP/Frameworks/App.framework/App" || { echo "缺 App.framework/App（Dart AOT 产物）"; exit 1; }
           test -f "$APP/Frameworks/Flutter.framework/Flutter" || { echo "缺 Flutter.framework"; exit 1; }
           echo "--- app 结构 ---"
           ls -la "$APP" | head -20

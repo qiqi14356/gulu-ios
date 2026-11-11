@@ -78,10 +78,12 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
 print(f"packed: {out}  ({out.stat().st_size:,} B, {count} files)")
 
 # 结构自检：这三个缺一个就装不上
+# 注意 App.framework 落在 Frameworks/ 下（xcode_backend 里 embedFlutterFrameworks
+# 用 FRAMEWORKS_FOLDER_PATH 做目标目录），不是 app 根目录。
 need = [
     f"Payload/{app_name}/{exe_name}",
     f"Payload/{app_name}/Info.plist",
-    f"Payload/{app_name}/App.framework/App",
+    f"Payload/{app_name}/Frameworks/App.framework/App",
 ]
 with zipfile.ZipFile(out) as z:
     names = set(z.namelist())
