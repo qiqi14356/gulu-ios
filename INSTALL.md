@@ -102,7 +102,7 @@ python scripts/gh_build_ios.py --repo gulu-ios --skip-build
 
 跑完可以去 `https://github.com/你的用户名/gulu-ios/actions` 看实时日志。macOS runner 会：
 
-1. 装 Xcode 15.4
+1. 装 Xcode（`latest-stable`，macos-15 上就是 16.x 系列）
 2. 装 Flutter 3.24.5
 3. `flutter create --platforms=ios` 生成 `ios/` 容器
 4. 改 bundle id 成 `com.gulugulu.gulu`
@@ -110,7 +110,8 @@ python scripts/gh_build_ios.py --repo gulu-ios --skip-build
 6. 补 Info.plist（中文权限文案、后台音频、ATS）
 7. `flutter build ios --release --no-codesign`
 8. 验产物结构（`Runner`、`App.framework/App`、`Flutter.framework`）
-9. 打成 `Payload/Runner.app` 结构的 zip → 改名 `.ipa`
+9. 递归清掉所有残留 `_CodeSignature`（含 framework 内那两份）
+10. 打成 `Payload/Runner.app` 结构的 zip → 改名 `.ipa`
 10. 上传 artifact
 
 ---
@@ -286,7 +287,7 @@ gulu_ios/
 │   ├── gh_build_ios.py        建仓库/推码/触发/等待/下载，一条命令
 │   └── lint_dart.py           本机没 Dart 时的源码预检
 ├── .github/workflows/
-│   └── ios-unsigned.yml       macos-14 上编未签名 ipa
+│   └── ios-unsigned.yml       macos-15 上编未签名 ipa
 ├── dist/                      已生成的 OTA 清单样例
 ├── pubspec.yaml               只依赖 dio
 └── .gitattributes             强制 .sh 用 LF（不然 macOS 上会报 $\r 错误）

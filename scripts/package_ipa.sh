@@ -43,13 +43,28 @@ def needs_exec(rel: Path) -> bool:
         return True
     return False
 
-# 打包前清掉残留签名，避免重签时报「bundle 已签名」冲突
-for junk in ("_CodeSignature", "embedded.mobileprovision", "SC_Info"):
-    p = app / junk
-    if p.is_dir():
-        shutil.rmtree(p, ignore_errors=True)
-    elif p.exists():
-        p.unlink()
+# 打包前清掉残留签名，避免 Sideloadly/AltStore 重签时报冲突。
+# 必须递归：flutter build --no-codesign 仍会给 framework 留下一份
+# _CodeSignature（App.framework/_CodeSignature、Flutter.framework/_CodeSignature），
+# 只清 app 根目录会漏掉它们，重签时旧签名与新证书对不上。
+JUNK_NAMES = {"_CodeSignature", "embedded.mobileprovision", "SC_Info", "CodeResources"}
+removed = []
+for root, dirs, files in os.walk(app, topdown=True):
+    for d in list(dirs):
+        if d in JUNK_NAMES:
+            p = Path(root) / d
+            shutil.rmtree(p, ignore_errors=True)
+            removed.append(str(p.relative_to(app)))
+            dirs.remove(d)
+    for f in list(files):
+        if f in JUNK_NAMES:
+            p = Path(root) / f
+            p.unlink(missing_ok=True)
+            removed.append(str(p.relative_to(app)))
+if removed:
+    print(f"stripped {len(removed)} stale signature path(s):")
+    for r in removed:
+        print(f"  - {r}")
 
 DIR_MODE = 0o755
 count = 0

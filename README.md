@@ -133,7 +133,7 @@ gulu_ios/
 │   ├── gen_ota_manifest.py    生成 itms-services 用的 manifest.plist
 │   └── lint_dart.py           本机没 Dart 时的源码预检（被 preflight 取代）
 ├── .github/workflows/
-│   └── ios-unsigned.yml       macos-14 上编未签名 ipa（16 步，含产物校验）
+│   └── ios-unsigned.yml       macos-15 上编未签名 ipa（17 步，含产物校验）
 ├── dist/                      已生成的 OTA 清单样例
 ├── pubspec.yaml               只依赖 dio
 ├── .gitattributes             强制 .sh 用 LF（不然 macOS 上会报 $\r 错误）
