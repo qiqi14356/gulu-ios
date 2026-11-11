@@ -13,8 +13,8 @@ APK → IPA **没有转换器**。Android 包 = DEX 字节码 + Android NDK 的 
 | 项 | 值 |
 |---|---|
 | 文件 | `gulu-2.2.5-playable.ipa` |
-| 大小 | 23,383,297 B |
-| SHA-256 | `a8fde25b244c07c0945c90f89914c7579e81e6cc86a78f532c5c1bc870981919` |
+| 大小 | 23,258,763 B |
+| SHA-256 | `d49e78544583feab544de3d3815f3c9f6831cf5dbd222ae3e5a2d86a035119e5` |
 | 下载 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/gulu-2.2.5-playable.ipa> |
 | OTA 清单 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/manifest.plist> |
 | 安装页 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/install.html> |
@@ -56,7 +56,7 @@ dart run scripts/dyn/test_hls.dart
 ```bash
 cd D:\dsh-work\gulu_ios
 
-# 1) 自检（14 项，2 秒）
+# 1) 自检（15 项，2 秒）
 python scripts/preflight.py
 
 # 2) 一条命令：建仓库 → 推代码 → 触发构建 → 等完成 → 下载 ipa
@@ -151,7 +151,7 @@ gulu_ios/
 │   ├── icon_src_1024.png      1024 源图（官网 logo 裁出来的鲸鱼）
 │   └── AppIcon.appiconset/    15 个尺寸 + Contents.json
 ├── scripts/
-│   ├── preflight.py           推 GitHub 前的本地体检（14 项）
+│   ├── preflight.py           推 GitHub 前的本地体检（15 项）
 │   ├── gh_build_ios.py        建仓库/推码/触发/等待/下载，一条命令
 │   ├── gen_ios_container.sh   flutter create 出 ios/，改 bundle id，塞图标
 │   ├── patch_pbxproj.py       精确改 PRODUCT_BUNDLE_IDENTIFIER
@@ -173,7 +173,7 @@ gulu_ios/
 
 ## 自检覆盖了什么
 
-`python scripts/preflight.py` 会验 14 项：
+`python scripts/preflight.py` 会验 15 项：
 
 | 检查 | 抓的是什么错 |
 |---|---|
@@ -190,6 +190,7 @@ gulu_ios/
 | Info.plist 补丁 | 用**真实 Flutter 模板**跑一遍，验中文名/权限文案/原有键没被破坏 |
 | ipa 打包自测 | 造一个假 `Runner.app` 真跑打包，验 `Runner` 是 `0755` |
 | dart analyze | 有 Dart SDK 就跑真分析 |
+| 播放清单 | `assets/demo/*.json` 的段数/时长/前缀对不上，或 `durs` 被当成秒存 → 播到一半黑屏 |
 
 ---
 

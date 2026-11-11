@@ -80,11 +80,11 @@ python scripts/gh_build_ios.py --repo gulu-ios
 [12:50:14] run #1 id=1234567890 已启动
 [12:50:29] 构建状态: in_progress/-
 [12:55:41] 构建状态: completed/success
-[12:55:42] 下载 artifact: gulu-unsigned-ipa (18874368 B)
-[12:55:44]   -> D:\dsh-work\gulu_ios\build\ios\ipa\gulu-unsigned.ipa (18350080 B)
+[15:04:41] 下载 artifact: gulu-unsigned-ipa (23172197 B)
+[15:04:58]   -> D:\dsh-work\gulu_ios\dist\art2\gulu-unsigned.ipa (23258763 B)
 ```
 
-**产物：** `D:\dsh-work\gulu_ios\build\ios\ipa\gulu-unsigned.ipa`
+**产物：** `D:\dsh-work\gulu_ios\dist\art2\gulu-unsigned.ipa`（23,258,763 B）—— 已发布的那个就是它
 
 想要私有仓库加 `--private`：
 
@@ -136,7 +136,20 @@ python scripts/gh_build_ios.py --repo gulu-ios --skip-build
 
 ### 3.3 拖入 ipa
 
-1. **IPA 框**：点开选 `D:\dsh-work\gulu_ios\build\ios\ipa\gulu-unsigned.ipa`
+**已经编好的包，直接下这个**（23,258,763 B）：
+
+<https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/gulu-2.2.5-playable.ipa>
+
+下载后校验（PowerShell，输出应等于下面那行）：
+
+```powershell
+Get-FileHash .\gulu-2.2.5-playable.ipa -Algorithm SHA256
+# d49e78544583feab544de3d3815f3c9f6831cf5dbd222ae3e5a2d86a035119e5
+```
+
+自己重新编的包则在 `D:\dsh-work\gulu_ios\build\ios\ipa\gulu-unsigned.ipa`。
+
+1. **IPA 框**：点开选上面那个 ipa（或自己编的 `gulu-unsigned.ipa`）
 2. **Apple ID 框**：填你的 Apple ID 邮箱
 3. 点 **Start**
 
