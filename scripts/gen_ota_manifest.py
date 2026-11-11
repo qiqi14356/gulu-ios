@@ -70,6 +70,9 @@ html = f"""<!doctype html>
   a.btn{{display:block;margin-top:20px;background:#7c4dff;color:#fff;text-decoration:none;
         padding:14px;border-radius:12px;font-weight:600}}
   code{{background:#000;padding:2px 6px;border-radius:4px;font-size:12px;color:#7c4dff}}
+  a.alt{{display:block;margin-top:10px;color:#7c4dff;font-size:13px;text-decoration:none}}
+  .warn{{background:#2a1f10;border:1px solid #6b4a12;border-radius:10px;padding:10px 12px;
+        font-size:12px;color:#e0b060;margin-top:16px;text-align:left;line-height:1.6}}
 </style>
 </head>
 <body>
@@ -79,6 +82,11 @@ html = f"""<!doctype html>
   <a class="btn" href="itms-services://?action=download-manifest&url={a.ipa.rsplit('/',1)[0]}/manifest.plist">
     点击安装
   </a>
+  <a class="alt" href="{a.ipa}">或者直接下载 ipa 文件（用 Sideloadly 重签）</a>
+  <div class="warn">
+    未签名的 ipa 走上面那个按钮一定会失败 —— iOS 只安装带有效签名的包。
+    先用 Sideloadly / AltStore / TrollStore 重签，再回到这里安装。
+  </div>
   <p style="margin-top:18px">若提示「无法安装」，请检查：<br>
      1. 用 <b>Safari</b> 打开本页（微信/QQ 内置浏览器不支持）<br>
      2. 描述文件里的 UDID 已包含这台设备<br>
