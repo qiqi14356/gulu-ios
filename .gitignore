@@ -31,3 +31,6 @@ ios/
 .gh_token
 .gh_token.*
 !.gh_token.example
+
+# 本地验证产物
+.verify/
