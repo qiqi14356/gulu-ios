@@ -35,5 +35,9 @@ ios/
 # 本地验证产物
 .verify/
 
+# 本地逆向 / 抓包 / 内存分析脚本与日志（不进 CI 仓库）
+scripts/dyn/
+*.bak
+
 # 本地验证产物
 .verify/
