@@ -41,3 +41,6 @@ scripts/dyn/
 
 # 本地验证产物
 .verify/
+
+# 构建产物与发布件（体积大，走 Releases 分发）
+dist/

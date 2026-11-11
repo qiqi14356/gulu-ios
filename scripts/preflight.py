@@ -32,6 +32,12 @@ def check_required_files() -> None:
         "lib/api.dart",
         "lib/pages/home_page.dart",
         "lib/pages/probe_page.dart",
+        "lib/local_hls.dart",
+        "lib/pages/player_page.dart",
+        "assets/demo/ep02.json",
+        "assets/demo/ep05.json",
+        "assets/demo/ep06.json",
+        "scripts/mk_demo_asset.py",
         "scripts/gen_ios_container.sh",
         "scripts/package_ipa.sh",
         "scripts/patch_pbxproj.py",
@@ -291,13 +297,49 @@ def check_bundle_id_patch() -> None:
     tmp.unlink(missing_ok=True)
 
 
+def check_demo_assets() -> None:
+    """播放源清单的结构与真实性：段数/时长/前缀/tails 一致，且能拼出可分片的 URL。"""
+    d = ROOT / "assets" / "demo"
+    files = sorted(d.glob("*.json"))
+    if not files:
+        add(FAIL, "播放清单", "assets/demo 里没有 json")
+        return
+    problems: list[str] = []
+    total = 0.0
+    for f in files:
+        try:
+            j = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            problems.append(f"{f.name}: 解析失败 {e}")
+            continue
+        tails = j.get("tails") or []
+        durs = j.get("durs") or []
+        prefix = j.get("prefix") or ""
+        if not tails or not prefix:
+            problems.append(f"{f.name}: 缺 tails/prefix")
+            continue
+        if len(tails) != len(durs):
+            problems.append(f"{f.name}: tails={len(tails)} durs={len(durs)}")
+            continue
+        # durs 必须是毫秒量级；如果最大值 < 100 说明已经被当成秒存进去了
+        mx = max(durs)
+        if mx < 100:
+            problems.append(f"{f.name}: durs 像秒不像毫秒（max={mx}）")
+        total += sum(durs) / 1000.0
+        if not (prefix + tails[0]).startswith("https://"):
+            problems.append(f"{f.name}: 拼出来的 URL 不是 https")
+    add(FAIL if problems else OK, "播放清单",
+        "; ".join(problems) if problems else
+        f"{len(files)} 集，共 {total/60:.0f} 分钟，段数/时长/前缀一致")
+
+
 def main() -> int:
     print(f"工程根目录: {ROOT}\n")
     checks = [
         check_required_files, check_appicon, check_pubspec, check_workflow,
         check_shell_scripts, check_python_scripts, check_gitignore,
         check_gitattributes, check_bundle_id_patch, check_plist_patch,
-        check_ipa_packaging, check_dart_analyze,
+        check_ipa_packaging, check_dart_analyze, check_demo_assets,
     ]
     for c in checks:
         try:

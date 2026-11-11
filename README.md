@@ -8,6 +8,35 @@ APK → IPA **没有转换器**。Android 包 = DEX 字节码 + Android NDK 的 
 
 ---
 
+## 已产出的安装包（现在就能下）
+
+| 项 | 值 |
+|---|---|
+| 文件 | `gulu-2.2.5-playable.ipa` |
+| 大小 | 23,383,297 B |
+| SHA-256 | `a8fde25b244c07c0945c90f89914c7579e81e6cc86a78f532c5c1bc870981919` |
+| 下载 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/gulu-2.2.5-playable.ipa> |
+| OTA 清单 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/manifest.plist> |
+| 安装页 | <https://github.com/qiqi14356/gulu-ios/releases/download/v2.2.5-playable/install.html> |
+| bundle id | `com.gulugulu.gulu` |
+| 状态 | **未签名**，需 Sideloadly / AltStore / TrollStore 重签后安装 |
+| OTA 直装 | 只有**你自己用证书签过**之后，`install.html` 那条 `itms-services` 路径才通；未签名包走 OTA 必然失败 |
+
+这个包里**内置了 3 集可播放内容**（嫁金钗 第 02 / 05 / 06 集），分片清单来自真机
+`exo_video_cache` 的 `urlMap`，播放时由 `LocalHlsServer` 把 CDN 上伪装成 `.png` 的
+MPEG-TS 分片反代成 `video/mp2t` 喂给 `AVPlayer`。**不需要登录、不需要破解片库接口**。
+
+自检（本地，不需要 iPhone）：
+
+```bash
+dart run scripts/dyn/test_hls.dart
+# playlist: 嫁金钗 第02集 segs=888 dur=2984.2s
+# m3u8 status=200 bytes=46178
+# seg 0/300/887 status=200 ct=video/mp2t head=47401110
+```
+
+---
+
 ## 现状（已核对的事实）
 
 | 项 | 结论 |
@@ -166,16 +195,52 @@ gulu_ios/
 
 ## 已知限制
 
-- **重建版不等于原版**。原版业务全在 SecShell 保护的加密 dex 里，API 域名运行时解密。没有真实 base URL 就没有片库、播放、弹幕。
+- **能播的是抓下来的剧集，不是无限片库**。片库列表走 `/app/bn/v2`（会话密钥加密的
+  protobuf，`libapp.so` 里 AES S-box 零命中），静态+动态都不可复现 → **没有片库浏览**。
+  要加新剧，只能在原版 App 里播一遍，再把 `exo_video_cache/<id>/1.json` 抽出来做成
+  `assets/demo/*.json`（流程见下）。
+- **m3u8 的 token 会过期，分片不会**。`sourceUrl` 里的 `m.php?data=...` 是一次性 token
+  （176 字节密文，前三集固定前缀 `f4936982396fc13cbfe98f2dec40e6f3`），取一次就烂；
+  但 `urlMap` 里每个分片的 CDN 地址**永久有效**，所以本工程只用 `urlMap`，不碰 token。
 - **7 天重签**。免费 Apple ID 签的证书 7 天失效。买 $99/年开发者账号可延长到 1 年。
 - **上不了 App Store**。需要开发者账号 + 正式证书，且影视聚合类内容过不了审核。
+- **iOS 上没实机验证过**。构建机是 GitHub 的 macOS runner，产物结构/权限/架构/Info.plist
+  都已逐项核对（见 `scripts/preflight.py`），但**没有在真 iPhone 上跑过**。
 
-### 想让它真能用，下一步
+### 加一集新剧的完整流程
 
-1. 一台能跑 Frida 的 Android 机，装原版 APK
-2. Hook `libSecShell.so` 的 `JNI_OnLoad` 和 dex 解密函数，dump 真实 `classes.dex`
-3. 在 dump 的 dex 里搜 `BASE_URL` / `http` 常量，拿真实 API 域名
-4. `mitmproxy` + 系统证书抓包，记录 `/api.php`、`/movie.do` 的请求/响应结构
-5. 用 `--dart-define=API_BASE=https://真实域名` 传入构建，按抓到的结构补 `lib/api.dart` 的模型层
+```bash
+# 1) 平板/模拟器上装原版 APK，把目标剧集播一遍（让它写缓存）
+adb -s <serial> shell su -c 'cd /data/data/com.hehefankuai.app/app_flutter/exo_video_cache && ls -t | head'
 
-这一步是**重新实现**，不是转格式。
+# 2) 把最新那个目录的 1.json 拉下来
+adb -s <serial> shell su -c 'cat /data/data/com.hehefankuai.app/app_flutter/exo_video_cache/<id>/1.json > /sdcard/1.json'
+adb -s <serial> shell su -c 'chmod 644 /sdcard/1.json'
+adb -s <serial> pull /sdcard/1.json D:/dsh-work/cap/1.json
+
+# 3) 转成工程用的压缩格式（prefix + tails，524 KB -> 67 KB）
+python scripts/mk_demo_asset.py D:/dsh-work/cap/1.json --title "剧名" --episode "第07集" --id <videoPathId> --out assets/demo/ep07.json
+
+# 4) 把新文件加进 lib/pages/home_page.dart 的 _sources 列表
+#    （pubspec 的 assets/demo/ 是目录通配，新文件自动打进包）
+# 5) 提交 → 推 main → CI 自动重建出带新剧集的 ipa
+```
+
+**注意**：`1.json` 里的 `durs` 单位是**毫秒**，`DemoPlaylist` 内部统一 `/1000.0` 转秒；
+写 `#EXTINF` 时忘了除会得到 `8050.000000` 这种 2 小时的分片时长，AVPlayer 会判列表非法。
+
+### 为什么不再尝试破解片库
+
+已经试过并排除的路线（都留了脚本在 `scripts/dyn/`，但没有一条走通）：
+
+| 路线 | 结果 |
+|---|---|
+| Frida hook `libSecShell.so` | attach 立刻 `target terminated with signal 11`，壳自带反调试 |
+| 内存 dump 找明文域名/响应 | 9 个 dump 70 MB，`vod_name`/`m3u8`/`main_url`/域名 的 UTF-8+UTF-16LE **双编码全 0 命中** |
+| `iptables DNAT` + 透传代理抓解析请求 | 62,782 包零命中 `dsxt`/`api.php`；播放复用缓存 resolvedUrl，根本不重新解析 |
+| 裸 socket 直接打 `172.247.189.48:80` | 恒 `400 Bad Request`（nginx 层拒绝，非应用层），换 UA/Host/签名头都无效 |
+| WebSocket `103.45.132.22:17979` 解密 | 帧 `02 08 0N 12 <len> <密文>`，AEAD 全组合（AESGCM/ChaCha20 × key 派生 × nonce × tag 布局）全部 `InvalidTag` |
+| isar `app_cache.sqlite` 直读 | 二进制格式，全库 URL 正则 0 命中，无公开解析器 |
+| `tos.php?url=` 反查 | 需要另一套体系的视频 id，手上所有 id（videoId/videoPathId/history id）全部「未找到视频URL」 |
+
+结论：**片库这条路投入产出不成立**。但播放链路是通的 —— 这就是本工程走缓存分片的原因。
