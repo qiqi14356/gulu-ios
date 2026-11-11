@@ -1,0 +1,4 @@
+# 把这个文件复制成 .gh_token，里面只放一行 token，别加空格和换行以外的字符
+# 建 token: https://github.com/settings/tokens  →  Generate new token (classic)
+# 勾选权限: repo（全勾）、workflow
+ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

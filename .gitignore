@@ -26,3 +26,8 @@ __pycache__/
 # 生成物（ios/ 由 gen_ios_container.sh 现场生成，不入库）
 # 如果你想连 ios/ 一起提交，删掉下面这行
 ios/
+
+# GitHub token（绝不入库）
+.gh_token
+.gh_token.*
+!.gh_token.example

@@ -3,22 +3,31 @@ name: build-ios-unsigned
 # 在 GitHub 免费的 macOS runner 上编译出未签名 .ipa。
 # 下载后用 Sideloadly / AltStore / TrollStore 重签安装。
 #
-# 触发方式：
-#   - 手动：Actions → build-ios-unsigned → Run workflow
-#   - 推送到 main：自动跑
+# 触发：Actions → build-ios-unsigned → Run workflow
+# 也可用 scripts/gh_build_ios.py 一条命令全自动跑完。
 on:
   workflow_dispatch:
     inputs:
       api_base:
-        description: "业务 API 根地址（探测用，可留空）"
+        description: "业务 API 根地址（探测页用）"
         required: false
         default: "https://glgl.tv"
       flutter_version:
         description: "Flutter 版本"
         required: false
         default: "3.24.5"
+      xcode_version:
+        description: "Xcode 版本（选 runner 上存在的，如 15.4 / 16.2 / latest-stable）"
+        required: false
+        default: "15.4"
   push:
     branches: [main]
+    paths:
+      - "lib/**"
+      - "scripts/**"
+      - "ios_assets/**"
+      - "pubspec.yaml"
+      - ".github/workflows/**"
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -33,11 +42,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ github.event.inputs.xcode_version || '15.4' }}
+
       - name: Show runner toolchain
         run: |
           sw_vers
           xcodebuild -version
-          pod --version || true
+          xcrun --sdk iphoneos --show-sdk-version
           python3 --version
 
       - name: Setup Flutter
@@ -50,25 +64,36 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      - name: Precache iOS artifacts
+      - name: Precache iOS engine artifacts
         run: flutter precache --ios
 
       - name: Resolve Dart dependencies
         run: flutter pub get
 
-      - name: Generate ios/ container
+      # ios/ 不入库，由 flutter create 现场生成
+      - name: Generate ios container
         run: |
           chmod +x scripts/*.sh
           ORG=com.gulugulu NAME=gulu ./scripts/gen_ios_container.sh
 
+      - name: Verify generated project
+        run: |
+          set -e
+          test -f ios/Runner.xcodeproj/project.pbxproj || { echo "缺 project.pbxproj"; exit 1; }
+          test -f ios/Runner/Info.plist || { echo "缺 Info.plist"; exit 1; }
+          test -f ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json || { echo "缺 AppIcon"; exit 1; }
+          grep -q "com.gulugulu.gulu" ios/Runner.xcodeproj/project.pbxproj || { echo "bundle id 没改上"; exit 1; }
+          echo "工程文件齐备"
+
       - name: Patch Info.plist
         run: python3 scripts/patch_info_plist.py ios/Runner/Info.plist
 
-      - name: Dump resolved plist keys
+      - name: Show patched plist keys
         run: |
-          plutil -p ios/Runner/Info.plist | grep -E "CFBundleDisplayName|UIBackgroundModes|ITSAppUsesNonExemptEncryption" || true
+          plutil -p ios/Runner/Info.plist | grep -E \
+            "CFBundleDisplayName|UIBackgroundModes|ITSAppUsesNonExemptEncryption|NSAppTransportSecurity" || true
 
-      # flutter build 会自己跑 pod install，不要提前手动执行
+      # flutter build 内部会自己跑 pod install，不要提前手动执行
       - name: Build (release, no codesign)
         env:
           API_BASE: ${{ github.event.inputs.api_base }}
@@ -78,14 +103,32 @@ jobs:
             --no-codesign \
             --dart-define=API_BASE="${API_BASE:-https://glgl.tv}"
 
+      - name: Verify Runner.app
+        run: |
+          set -e
+          APP=build/ios/iphoneos/Runner.app
+          test -d "$APP" || { echo "没有产出 $APP"; exit 1; }
+          test -f "$APP/Runner" || { echo "缺可执行文件 Runner"; exit 1; }
+          test -f "$APP/App.framework/App" || { echo "缺 App.framework/App（Dart AOT 产物）"; exit 1; }
+          test -f "$APP/Frameworks/Flutter.framework/Flutter" || { echo "缺 Flutter.framework"; exit 1; }
+          echo "--- app 结构 ---"
+          ls -la "$APP" | head -20
+          echo "--- 架构 ---"
+          lipo -info "$APP/Runner" || true
+
       - name: Package unsigned ipa
         run: |
           ./scripts/package_ipa.sh \
             build/ios/iphoneos/Runner.app \
             build/ios/ipa/gulu-unsigned.ipa
 
-      - name: Report artifact size
-        run: ls -lh build/ios/ipa/
+      - name: Verify ipa
+        run: |
+          set -e
+          IPA=build/ios/ipa/gulu-unsigned.ipa
+          test -f "$IPA" || { echo "ipa 没打出来"; exit 1; }
+          unzip -l "$IPA" | grep -q "Payload/Runner.app/Runner" || { echo "ipa 结构不对"; exit 1; }
+          ls -lh "$IPA"
 
       - uses: actions/upload-artifact@v4
         with:
